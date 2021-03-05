@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.androiddevchallenge
+package com.xinto.simplecomposetimer
 
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -36,11 +36,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.FloatingActionButton
+import androidx.compose.material.FloatingActionButtonDefaults.elevation
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
@@ -51,15 +53,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.androiddevchallenge.ui.theme.MyTheme
+import com.xinto.simplecomposetimer.ui.theme.MyTheme
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
+
+    @ExperimentalUnsignedTypes
     @ExperimentalAnimationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,13 +80,26 @@ class MainActivity : AppCompatActivity() {
 @ExperimentalAnimationApi
 @Composable
 fun MyApp() {
-    Surface(color = MaterialTheme.colors.background) {
-        var time by remember { mutableStateOf("00:00:00") }
-        val hour = remember { mutableStateOf("00") }
-        val minute = remember { mutableStateOf("00") }
-        val second = remember { mutableStateOf("00") }
-        var currentScreen by remember { mutableStateOf(TimerState.AWAITING_INPUT) }
+    var time by remember { mutableStateOf("00:00:00") }
+    val hour = remember { mutableStateOf("00") }
+    val minute = remember { mutableStateOf("00") }
+    val second = remember { mutableStateOf("00") }
+    var currentScreen by remember { mutableStateOf(TimerState.AWAITING_INPUT) }
+    val backgroundColor = MaterialTheme.colors.background
+    Surface(color = backgroundColor) {
         Box(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                backgroundColor = backgroundColor,
+                elevation = if (MaterialTheme.colors.isLight) 4.dp else 0.dp,
+                contentPadding = PaddingValues(start = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.app_name),
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically),
+                    fontSize = 18.sp
+                )
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -98,17 +116,17 @@ fun MyApp() {
                         TimeInputField(
                             value = hour,
                             maxValue = 24,
-                            label = "h"
+                            label = "Hours"
                         )
                         TimeInputField(
                             value = minute,
                             maxValue = 60,
-                            label = "m"
+                            label = "Minutes"
                         )
                         TimeInputField(
                             value = second,
                             maxValue = 60,
-                            label = "s"
+                            label = "Seconds"
                         )
                     }
                 }
@@ -155,7 +173,11 @@ fun MyApp() {
                             }
                         }.start()
                         currentScreen = TimerState.RUNNING
-                    }
+                    },
+                    elevation = elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
@@ -167,7 +189,10 @@ fun MyApp() {
     }
 }
 
-fun Long.padToDoubleHourUnit(): String = if (toString().length < 2) "0$this" else toString()
+fun Long.padToDoubleHourUnit(): String {
+    val asString = toString()
+    return if (asString.length < 2) "0$asString" else asString
+}
 
 @Composable
 fun RowScope.TimeInputField(
