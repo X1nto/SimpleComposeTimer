@@ -9,7 +9,7 @@ A simple timer app, which does exactly what you tell it to do - sets a timer.
 While the UI might be a bit different from what you'd expect from a timer app, I believe the approach I used (OutlinedTextFields for input) makes the app look unique.
 I also liked the `weight` attribute of the Modifier interface, which made it possible to have text fields of the same size.
 
-Additionally, I also wanted to add a stop button for the timer, but because of weird NPEs I scrapped out the idea :grin:
+Additionally, I wanted to add a stop button for the timer, but because of weird NPEs I scrapped out the idea :grin:
 
 ## :camera_flash: Screenshots
 <img src="/results/screenshot_1.png" width="260">&emsp;<img src="/results/screenshot_2.png" width="260">
