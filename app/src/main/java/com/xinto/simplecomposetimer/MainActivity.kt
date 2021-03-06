@@ -16,15 +16,12 @@
 package com.xinto.simplecomposetimer
 
 import android.os.Bundle
-import android.os.CountDownTimer
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
@@ -45,11 +42,13 @@ import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,10 +59,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xinto.simplecomposetimer.ui.theme.MyTheme
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.ticker
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
+    @ObsoleteCoroutinesApi
     @ExperimentalUnsignedTypes
     @ExperimentalAnimationApi
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +80,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 // Start building your app here!
+@ObsoleteCoroutinesApi
 @ExperimentalAnimationApi
 @Composable
 fun MyApp() {
@@ -84,8 +88,14 @@ fun MyApp() {
     val hour = remember { mutableStateOf("00") }
     val minute = remember { mutableStateOf("00") }
     val second = remember { mutableStateOf("00") }
+    val coroutineScope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf(TimerState.AWAITING_INPUT) }
     val backgroundColor = MaterialTheme.colors.background
+    var coroutineJob: Job? = null
+    var tickerChannel: ReceiveChannel<Unit>? = null
+    val playIcon = Icons.Default.PlayArrow
+    val stopIcon = Icons.Default.Stop
+
     Surface(color = backgroundColor) {
         Box(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
@@ -143,53 +153,58 @@ fun MyApp() {
                     )
                 }
             }
-            AnimatedVisibility(
-                visible = currentScreen == TimerState.AWAITING_INPUT,
-                enter = expandIn() + fadeIn(),
-                exit = shrinkOut() + fadeOut(),
+            FloatingActionButton(
                 modifier = Modifier
                     .padding(PaddingValues(bottom = 32.dp))
                     .align(Alignment.BottomCenter),
-                initiallyVisible = true
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        if (hour.value.isEmpty()) hour.value = "00"
-                        if (minute.value.isEmpty()) minute.value = "00"
-                        if (second.value.isEmpty()) second.value = "00"
+                onClick = {
 
-                        val millisHour = TimeUnit.HOURS.toMillis(hour.value.toLong())
-                        val millisMinute = TimeUnit.MINUTES.toMillis(minute.value.toLong())
-                        val millisSecond = TimeUnit.SECONDS.toMillis(second.value.toLong())
-                        object :
-                            CountDownTimer(millisHour + millisMinute + millisSecond + 1000, 1000) {
-                            override fun onTick(millisUntilFinished: Long) {
-                                time =
-                                    "${((millisUntilFinished / 1000) / 3600).padToDoubleHourUnit()}:${((millisUntilFinished / 1000) / 60).padToDoubleHourUnit()}:${((millisUntilFinished / 1000) % 60).padToDoubleHourUnit()}"
-                            }
+                    if (currentScreen == TimerState.RUNNING) {
+                        currentScreen = TimerState.AWAITING_INPUT
+                        tickerChannel?.cancel()
+                        coroutineJob?.cancel()
+                        return@FloatingActionButton
+                    }
 
-                            override fun onFinish() {
+                    if (hour.value.isEmpty()) hour.value = "00"
+                    if (minute.value.isEmpty()) minute.value = "00"
+                    if (second.value.isEmpty()) second.value = "00"
+
+                    val millisHour = TimeUnit.HOURS.toMillis(hour.value.toLong())
+                    val millisMinute = TimeUnit.MINUTES.toMillis(minute.value.toLong())
+                    val millisSecond = TimeUnit.SECONDS.toMillis(second.value.toLong())
+                    var totalMillis = millisHour + millisMinute + millisSecond
+                    coroutineJob = coroutineScope.launch {
+                        tickerChannel = ticker(1000L, 0L, Dispatchers.IO)
+                        for (event in tickerChannel!!) {
+                            time = "${((totalMillis / 1000) / 3600).doubleHourUnit}:${((totalMillis / 1000) / 60).doubleHourUnit}:${((totalMillis / 1000) % 60).doubleHourUnit}"
+
+                            if (totalMillis <= 0) {
                                 currentScreen = TimerState.AWAITING_INPUT
+                                tickerChannel?.cancel()
+                                cancel()
                             }
-                        }.start()
-                        currentScreen = TimerState.RUNNING
-                    },
-                    elevation = elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Start Timer"
-                    )
-                }
+
+                            totalMillis -= 1000
+                        }
+                    }
+                    currentScreen = TimerState.RUNNING
+                },
+                elevation = elevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp
+                )
+            ) {
+                Icon(
+                    imageVector = if (currentScreen == TimerState.RUNNING) stopIcon else playIcon,
+                    contentDescription = "Start Timer"
+                )
             }
         }
     }
 }
 
-fun Long.padToDoubleHourUnit(): String {
+val Long.doubleHourUnit: String get() {
     val asString = toString()
     return if (asString.length < 2) "0$asString" else asString
 }
@@ -220,6 +235,7 @@ fun RowScope.TimeInputField(
     )
 }
 
+@ObsoleteCoroutinesApi
 @ExperimentalAnimationApi
 @Preview("Light Theme", widthDp = 360, heightDp = 640)
 @Composable
@@ -229,6 +245,7 @@ fun LightPreview() {
     }
 }
 
+@ObsoleteCoroutinesApi
 @ExperimentalAnimationApi
 @Preview("Dark Theme", widthDp = 360, heightDp = 640)
 @Composable
