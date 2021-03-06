@@ -59,9 +59,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xinto.simplecomposetimer.ui.theme.MyTheme
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.ticker
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -175,7 +178,7 @@ fun MyApp() {
                     val millisSecond = TimeUnit.SECONDS.toMillis(second.value.toLong())
                     var totalMillis = millisHour + millisMinute + millisSecond
                     coroutineJob = coroutineScope.launch {
-                        tickerChannel = ticker(1000L, 0L, Dispatchers.IO)
+                        tickerChannel = ticker(1000L, 0L)
                         for (event in tickerChannel!!) {
                             time = "${((totalMillis / 1000) / 3600).doubleHourUnit}:${((totalMillis / 1000) / 60).doubleHourUnit}:${((totalMillis / 1000) % 60).doubleHourUnit}"
 
